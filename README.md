@@ -1,1 +1,5 @@
-# Affiliate-for-Server-Side-GTM
+# Rakuten Advertising - Affiliate for Server-Side GTM
+
+Supports the server side integration of the Rakuten Advertising affiliate tag.
+
+Please refer to the integration guide for full details.
