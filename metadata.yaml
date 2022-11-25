@@ -1,0 +1,7 @@
+homepage: "https://rakutenadvertising.com/"
+documentation: "https://go.rakutenadvertising.com/hubfs/Rakuten-Affiliate-for-Server-Side-Google-Tag-Manager.pdf"
+versions:
+  # Latest version
+  - sha: 
+    changeNotes: "Initial release."
+
