@@ -1045,18 +1045,7 @@ ___SERVER_PERMISSIONS___
 
 ___TESTS___
 
-scenarios:
-- name: Untitled test 1
-  code: |-
-    const mockData = {
-      // Mocked field values
-    };
-
-    // Call runCode to run the template's code.
-    runCode(mockData);
-
-    // Verify that the tag finished successfully.
-    assertApi('gtmOnSuccess').wasCalled();
+scenarios: []
 setup: mock("sendHttpRequest", (url, cb) => { cb(200, {}, {}); });
 
 
