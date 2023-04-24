@@ -824,6 +824,7 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
         requestUrl += "&amtlist=" + itemvalue_list;
         requestUrl += "&img=1";
         requestUrl += "&spi=3.4.1";
+        requestUrl += "&source=sgtm";
 
         // namelist added at the end as it has lowest importance
         requestUrl += "&namelist=" + name_list;
