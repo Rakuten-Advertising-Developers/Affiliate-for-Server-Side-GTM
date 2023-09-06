@@ -79,6 +79,34 @@ ___TEMPLATE_PARAMETERS___
         "type": "EQUALS"
       }
     ]
+  },
+  {
+    "displayName": "Logs Settings",
+    "name": "logsGroup",
+    "groupStyle": "ZIPPY_CLOSED",
+    "type": "GROUP",
+    "subParams": [
+      {
+        "type": "RADIO",
+        "name": "logType",
+        "radioItems": [
+          {
+            "value": "no",
+            "displayValue": "Do not log"
+          },
+          {
+            "value": "debug",
+            "displayValue": "Log to console during debug and preview"
+          },
+          {
+            "value": "always",
+            "displayValue": "Always log to console"
+          }
+        ],
+        "simpleValueType": true,
+        "defaultValue": "debug"
+      }
+    ]
   }
 ]
 
@@ -97,6 +125,11 @@ const Math = require("Math");
 const parseUrl = require("parseUrl");
 const sendHttpRequest = require("sendHttpRequest");
 const setCookie = require("setCookie");
+const getContainerVersion = require('getContainerVersion');
+const getRequestHeader = require('getRequestHeader');
+
+const isLoggingEnabled = determinateIsLoggingEnabled();
+const traceId = isLoggingEnabled ? getRequestHeader('trace-id') : undefined;
 
 function enc(data) {
     return encodeUriComponent(data || "");
@@ -230,10 +263,10 @@ if (data.type === "page_view") {
 } else if (data.type === "conversion") {
     // Conversion tag
     // Affiliate config setup
-    const affiliateConfig = JSON.parse(getEventData('RAN_affiliate_config')) || '{}';
+    const affiliateConfig = JSON.parse(getEventData('RAN_affiliate_config') || '{}');
     // define standard DL variables
     const orderId = getEventData('RAN_transaction_id');
-    const currency = getEventData('RAN_currency_code').toUpperCase();
+    const currency = (getEventData('RAN_currency_code') || '').toUpperCase();
     const customerStatus = getEventData('RAN_customer_status') || '';
     const customerId = getEventData('RAN_customer_id') || '';
     const conversionType = "Sale";
@@ -249,13 +282,13 @@ if (data.type === "page_view") {
         optionalDataOrder = tableData;
     }
 
-    let merchantID = affiliateConfig.ranMID;  
-    let allowCommission = true;  
+    let merchantID = affiliateConfig.ranMID;
+    let allowCommission = true;
     if (getEventData('RAN_allow_commission') === false || getEventData('RAN_allow_commission') === "false") {
         data.gtmOnFailure();
         return false;
     }
-  
+
     let domain = "track.linksynergy.com";
     if (affiliateConfig.domain) {
         domain = affiliateConfig.domain;
@@ -275,7 +308,7 @@ if (data.type === "page_view") {
     let removeOrderLevelTax = false;
     if (affiliateConfig.removeOrderTax === true) {
         removeOrderLevelTax = true;
-    }  
+    }
     let removeTaxFromProducts = true;
     if (affiliateConfig.removeTaxFromProducts === false) {
         removeTaxFromProducts = false;
@@ -297,7 +330,7 @@ if (data.type === "page_view") {
 
     let lineitems = [];
 
-    //custom_products is used to accomodate non standard ecommerce setups using a custom JS variable  
+    //custom_products is used to accomodate non standard ecommerce setups using a custom JS variable
     if (getEventData('RAN_custom_products')) {
         lineitems = JSON.parse(getEventData('RAN_custom_products'));
     } else {
@@ -329,7 +362,7 @@ if (data.type === "page_view") {
         conversionType: conversionType,
         lineitems: lineitems,
     };
-  
+
     // add affiliate config object to rm_trans
     if (affiliateConfig && affiliateConfig.ranMID) {
         dl.affiliateConfig = affiliateConfig;
@@ -536,23 +569,23 @@ if (data.type === "page_view") {
 
         let land = "";
         let tr = "";
-        let ignoreGatewayCookie = false;        
+        let ignoreGatewayCookie = false;
         if(getEventData('RAN_ignoreGatewayCookie') === true || getEventData('RAN_ignoreGatewayCookie') === "true"){
            ignoreGatewayCookie = true;
            }
-        
+
         let rmStore = getCookieValues("rmStore")[0] || "";
-      
-        let rmStoreGateway = getCookieValues("rmStoreGateway")[0] || '';      
+
+        let rmStoreGateway = getCookieValues("rmStoreGateway")[0] || '';
         if(ignoreGatewayCookie === false && rmStoreGateway && rmStoreGateway.length > 0){
         rmStore = rmStoreGateway;
-          }       
-      
+          }
+
         let custom_cookie_name = getEventData('RAN_custom_cookie_name') || '';
         if(custom_cookie_name){
         rmStore = getCookieValues(custom_cookie_name)[0];
-        } 
-      
+        }
+
         if (!rmStore) {
             data.gtmOnFailure();
             return false;
@@ -604,10 +637,10 @@ if (data.type === "page_view") {
         for (const E in optionalData) {
             if (optionalData.hasOwnProperty(E)) {
                 //requestUrl = requestUrl + "&" + enc(E) + "=" + enc(optionalData[E]);
-requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalData[E]);              
+requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalData[E]);
             }
         }
-   
+
         for (const E in optionalDataLineItems) {
             if (optionalDataLineItems.hasOwnProperty(E)) {
                 requestUrl =
@@ -629,8 +662,8 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
                 }
             }
         }
-  
-        // namelist added at the end as it has lowest importance      
+
+        // namelist added at the end as it has lowest importance
         requestUrl += "&namelist=" + name_list;
 
         const truncation_limit = 8000;
@@ -650,42 +683,44 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
             requestUrl += "&trunc=true";
         }
 
-        logToConsole(
-            "Rakuten Advertising: Performance Tag - RAN Pixel",
-            requestUrl
-        );
+        if(isLoggingEnabled){
+          logToConsole(JSON.stringify({
+            'Name': 'RakutenPerformanceTag',
+            'Type': 'Request',
+            'TraceId': traceId,
+            'EventName': 'Conversion',
+            'RequestMethod': 'GET',
+            'RequestUrl': requestUrl,
+          }));
+        }
 
-        sendHttpRequest(requestUrl, {
-                method: 'GET'
-            })
-        .then((result) => {
-                logToConsole(JSON.stringify({
-                    'Name': 'Rakuten Performance Tag',
-                    'Type': 'Response',
-                    'EventName': 'Conversion',
-                    'ResponseStatusCode': result.statusCode,
-                    'ResponseHeaders': result.headers,
-                    'ResponseBody': result.body,
-                }));
-                if (result.statusCode >= 200 && result.statusCode < 300) {
-                    data.gtmOnSuccess();
-                } else {
-                    data.gtmOnFailure();
-                }
-            }
-        )
-        .catch(() => {
-          logToConsole("Failed to make RAN Pixel Request");
-          data.gtmOnFailure();
+        sendHttpRequest(requestUrl, (statusCode, headers, body) => {
+          if(isLoggingEnabled) {
+            logToConsole(JSON.stringify({
+              'Name': 'RakutenPerformanceTag',
+              'Type': 'Response',
+              'EventName': 'Conversion',
+              'ResponseStatusCode': statusCode,
+              'ResponseHeaders': headers,
+              'ResponseBody': body,
+            }));
+          }
+          if (statusCode >= 200 && statusCode < 300) {
+            data.gtmOnSuccess();
+          } else {
+            data.gtmOnFailure();
+          }
+        }, {
+          method: 'GET'
         });
     }
 } else if (data.type === "lead") {
     // Lead tag
     // Affiliate config setup
-    const affiliateConfig = JSON.parse(getEventData('RAN_lead_affiliate_config')) || '{}';
+    const affiliateConfig = JSON.parse(getEventData('RAN_lead_affiliate_config') || '{}');
     // define standard DL variables
     const orderId = getEventData('RAN_transaction_id');
-    const currency = getEventData('RAN_currency_code').toUpperCase();
+    const currency = (getEventData('RAN_currency_code') || '').toUpperCase();
     const conversionType = getEventData('RAN_conversion_type') || "Lead";
 
 
@@ -737,7 +772,7 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
     let lineitems = [];
 
     // pre-defined lineitems hard coded values for lead gen and registrations etc.
-    let predefinedLineitems = JSON.parse(getEventData('RAN_predefined_products')) || '{}';
+    let predefinedLineitems = JSON.parse(getEventData('RAN_predefined_products') || '{}');
 
     if (predefinedLineitems) {
         lineitems = predefinedLineitems;
@@ -813,22 +848,22 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
 
         let land = "";
         let tr = "";
-        let ignoreGatewayCookie = false;        
+        let ignoreGatewayCookie = false;
         if(getEventData('RAN_ignoreGatewayCookie') === true || getEventData('RAN_ignoreGatewayCookie') === "true"){
            ignoreGatewayCookie = true;
            }
-        
+
         let rmStore = getCookieValues("rmStore")[0] || "";
-      
-        let rmStoreGateway = getCookieValues("rmStoreGateway")[0] || '';      
+
+        let rmStoreGateway = getCookieValues("rmStoreGateway")[0] || '';
         if(ignoreGatewayCookie === false && rmStoreGateway && rmStoreGateway.length > 0){
         rmStore = rmStoreGateway;
-          }       
-      
+          }
+
         let custom_cookie_name = getEventData('RAN_custom_cookie_name') || '';
         if(custom_cookie_name){
         rmStore = getCookieValues(custom_cookie_name)[0];
-        } 
+        }
 
         if (!rmStore) {
             data.gtmOnFailure();
@@ -860,35 +895,59 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
         // namelist added at the end as it has lowest importance
         requestUrl += "&namelist=" + name_list;
 
-        logToConsole(
-            "Rakuten Advertising: Performance Tag - RAN Pixel",
-            requestUrl
-        );
+        if(isLoggingEnabled) {
+          logToConsole(JSON.stringify({
+            'Name': 'RakutenPerformanceTag',
+             'Type': 'Request',
+             'TraceId': traceId,
+             'EventName': 'Lead',
+             'RequestMethod': 'GET',
+             'RequestUrl': requestUrl,
+          }));
+        }
 
-        sendHttpRequest(requestUrl, {
-                method: "GET"
-            })
-            .then((result) => {
-                logToConsole(JSON.stringify({
-                    'Name': 'Rakuten Performance Tag',
-                    'Type': 'Response',
-                    'EventName': 'Lead',
-                    'ResponseStatusCode': result.statusCode,
-                    'ResponseHeaders': result.headers,
-                    'ResponseBody': result.body,
-                }));
-                if (result.statusCode >= 200 && result.statusCode < 300) {
-                    data.gtmOnSuccess();
-                } else {
-                    data.gtmOnFailure();
-                }
-            })
-            .catch(() => {
-                logToConsole("Failed to make RAN Pixel Request");
-                data.gtmOnFailure();
-            });
-
+        sendHttpRequest(requestUrl, (statusCode, headers, body) => {
+          if(isLoggingEnabled) {
+            logToConsole(JSON.stringify({
+              'Name': 'RakutenPerformanceTag',
+              'Type': 'Response',
+              'EventName': 'Lead',
+              'ResponseStatusCode': statusCode,
+              'ResponseHeaders': headers,
+              'ResponseBody': body,
+            }));
+          }
+          if (statusCode >= 200 && statusCode < 300) {
+            data.gtmOnSuccess();
+          } else {
+            data.gtmOnFailure();
+          }
+        }, {
+          method: "GET"
+        });
     }
+}
+
+function determinateIsLoggingEnabled() {
+  const containerVersion = getContainerVersion();
+  const isDebug = !!(
+    containerVersion &&
+    (containerVersion.debugMode || containerVersion.previewMode)
+  );
+
+  if (!data.logType) {
+    return isDebug;
+  }
+
+  if (data.logType === 'no') {
+    return false;
+  }
+
+  if (data.logType === 'debug') {
+    return isDebug;
+  }
+
+  return data.logType === 'always';
 }
 
 
@@ -1057,6 +1116,81 @@ ___SERVER_PERMISSIONS___
     },
     "clientAnnotations": {
       "isEditedByUser": true
+    },
+    "isRequired": true
+  },
+  {
+    "instance": {
+      "key": {
+        "publicId": "read_request",
+        "versionId": "1"
+      },
+      "param": [
+        {
+          "key": "headerWhitelist",
+          "value": {
+            "type": 2,
+            "listItem": [
+              {
+                "type": 3,
+                "mapKey": [
+                  {
+                    "type": 1,
+                    "string": "headerName"
+                  }
+                ],
+                "mapValue": [
+                  {
+                    "type": 1,
+                    "string": "trace-id"
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "key": "headersAllowed",
+          "value": {
+            "type": 8,
+            "boolean": true
+          }
+        },
+        {
+          "key": "requestAccess",
+          "value": {
+            "type": 1,
+            "string": "specific"
+          }
+        },
+        {
+          "key": "headerAccess",
+          "value": {
+            "type": 1,
+            "string": "specific"
+          }
+        },
+        {
+          "key": "queryParameterAccess",
+          "value": {
+            "type": 1,
+            "string": "any"
+          }
+        }
+      ]
+    },
+    "clientAnnotations": {
+      "isEditedByUser": true
+    },
+    "isRequired": true
+  },
+  {
+    "instance": {
+      "key": {
+        "publicId": "read_container_data",
+        "versionId": "1"
+      },
+      "param": []
     },
     "isRequired": true
   }
