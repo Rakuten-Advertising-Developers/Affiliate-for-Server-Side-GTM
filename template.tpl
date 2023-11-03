@@ -206,7 +206,7 @@ if (data.type === "page_view") {
         if (atrv) {
             const ald = getFormattedTime(getTimestampMillis());
             const rmStore = "ald:" + ald + "|atrv:" + atrv;
-
+logToConsole('rmStore', rmStore);
             if (rmStore) {
                 setCookie(
                     "rmStore",
@@ -231,6 +231,7 @@ if (data.type === "page_view") {
     // Conversion tag
     // Affiliate config setup
     const affiliateConfig = JSON.parse(getEventData('RAN_affiliate_config')) || '{}';
+logToConsole('Affiliate Config', affiliateConfig); 
     // define standard DL variables
     const orderId = getEventData('RAN_transaction_id');
     const currency = getEventData('RAN_currency_code').toUpperCase();
@@ -252,6 +253,7 @@ if (data.type === "page_view") {
     let merchantID = affiliateConfig.ranMID;  
     let allowCommission = true;  
     if (getEventData('RAN_allow_commission') === false || getEventData('RAN_allow_commission') === "false") {
+logToConsole('Allow commission is set to false, the tag will not fire');
         data.gtmOnFailure();
         return false;
     }
@@ -264,28 +266,28 @@ if (data.type === "page_view") {
     if (affiliateConfig.tagType === "mop") {
         trackingMethod = "eventnvppixel";
     }
-    let discountReporting = "item";
-    if (affiliateConfig.discountType === "order") {
-        discountReporting = "order";
+    let discountReporting = "order";
+    if (affiliateConfig.discountType === "item") {
+        discountReporting = "item";
     }
     let includeCustomerStatus = false;
-    if (affiliateConfig.includeStatus === true) {
+    if (affiliateConfig.includeStatus === true || affiliateConfig.includeStatus === "true") {
         includeCustomerStatus = true;
-    }
-    let removeOrderLevelTax = false;
-    if (affiliateConfig.removeOrderTax === true) {
-        removeOrderLevelTax = true;
     }  
-    let removeTaxFromProducts = true;
-    if (affiliateConfig.removeTaxFromProducts === false) {
-        removeTaxFromProducts = false;
-    }
+    let removeOrderLevelTax = false;
+    if (affiliateConfig.removeOrderTax === true || affiliateConfig.removeOrderTax === "true") {
+        removeOrderLevelTax = true;
+    }   
+    let removeTaxFromProducts = false;
+    if (affiliateConfig.removeTaxFromProducts === true || affiliateConfig.removeTaxFromProducts === "true") {
+        removeTaxFromProducts = true;
+    }  
     let removeTaxFromDiscount = false;
-    if (affiliateConfig.removeTaxFromDiscount === true) {
+    if (affiliateConfig.removeTaxFromDiscount === true || affiliateConfig.removeTaxFromDiscount === "true") {
         removeTaxFromDiscount = true;
-    }
+    }   
     let useCentValues = true;
-    if (affiliateConfig.centValues === false) {
+    if (affiliateConfig.centValues === false || affiliateConfig.centValues === "false") {
         useCentValues = false;
     }
     const nonCentCurrencies = "JPY";
@@ -300,10 +302,11 @@ if (data.type === "page_view") {
     //custom_products is used to accomodate non standard ecommerce setups using a custom JS variable  
     if (getEventData('RAN_custom_products')) {
         lineitems = JSON.parse(getEventData('RAN_custom_products'));
+logToConsole('Rakuten custom products', lineitems);
     } else {
 
         let items = getEventData('items');
-
+logToConsole('Client GTM dataLayer items', items);
         for (var i = 0; i < items.length; i++) {
             lineitems.push({
                 quantity: items[i].quantity,
@@ -321,8 +324,10 @@ if (data.type === "page_view") {
                 },
             });
         }
+logToConsole('Rakuten lineitems', lineitems);      
     }
-    // define rm_trans object
+  
+    // define rm_trans object with essential parameters
     const dl = {
         orderid: orderId,
         currency: currency,
@@ -380,7 +385,7 @@ if (data.type === "page_view") {
             }
         }
     }
-
+logToConsole('Rakuten DataLayer', dl);
     // this function can be used to ensure any money value is being rounded consistently before output.
     // you should not round anything until it is passed into the final string
     const currencyValueToString = function(val) {
@@ -410,12 +415,12 @@ if (data.type === "page_view") {
     discountAmountLessTax = discountAmountLessTax || discountAmount;
 
     let skuPrefix = "";
-    if (customerStatus) {
+    if (customerStatus) {       
         if (
             (includeCustomerStatus && customerStatus.toUpperCase() == "EXISTING") ||
             (includeCustomerStatus && customerStatus.toUpperCase() == "RETURNING")
         ) {
-            skuPrefix = "R_";
+            skuPrefix = "R_";          
         }
     }
 
@@ -500,10 +505,10 @@ if (data.type === "page_view") {
                 }
             }
 
-            sku_list += itemSKU + "|";
+            sku_list += skuPrefix + itemSKU + "|";
             quantity_list += itemQuantity + "|";
             itemvalue_list += currencyValueToString(itemPrice) + "|";
-            name_list += itemName + "|";
+            name_list += skuPrefix + itemName + "|";
         }
 
         sku_list = sku_list.slice(0, -1);
@@ -552,7 +557,7 @@ if (data.type === "page_view") {
         if(custom_cookie_name){
         rmStore = getCookieValues(custom_cookie_name)[0];
         } 
-      
+logToConsole('Rakuten cookie', rmStore);      
         if (!rmStore) {
             data.gtmOnFailure();
             return false;
@@ -568,6 +573,7 @@ if (data.type === "page_view") {
         }
 
         let requestUrl = "https://" + domain + "/" + trackingMethod + "?mid=" + merchantID;
+        
         requestUrl += "&ord=" + orderId;
         requestUrl += "&land=" + land;
         requestUrl += "&tr=" + tr;
@@ -577,8 +583,8 @@ if (data.type === "page_view") {
         requestUrl += "&amtlist=" + itemvalue_list;
         requestUrl += "&img=1";
         requestUrl += "&spi=3.4.1";
-        requestUrl += "&source=sgtm";
-
+        requestUrl += "&source=sgtm";        
+      
         if (discountAmountLessTax && discountReporting.toLowerCase() === "item") {
             requestUrl += "&discount=" + discountAmountLessTax;
         }
@@ -603,8 +609,7 @@ if (data.type === "page_view") {
 
         for (const E in optionalData) {
             if (optionalData.hasOwnProperty(E)) {
-                //requestUrl = requestUrl + "&" + enc(E) + "=" + enc(optionalData[E]);
-requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalData[E]);              
+                requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalData[E]);              
             }
         }
    
@@ -630,9 +635,10 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
             }
         }
   
-        // namelist added at the end as it has lowest importance      
+        // namelist added at the end as it has lowest importance
+      
         requestUrl += "&namelist=" + name_list;
-
+      
         const truncation_limit = 8000;
 
         if (requestUrl.length > truncation_limit) {
@@ -683,15 +689,16 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
     // Lead tag
     // Affiliate config setup
     const affiliateConfig = JSON.parse(getEventData('RAN_lead_affiliate_config')) || '{}';
+logToConsole('RAN_lead_affiliate_config', affiliateConfig);  
     // define standard DL variables
     const orderId = getEventData('RAN_transaction_id');
     const currency = getEventData('RAN_currency_code').toUpperCase();
     const conversionType = getEventData('RAN_conversion_type') || "Lead";
 
-
     let merchantID = affiliateConfig.ranMID;
     let allowCommission = true;
     if (getEventData('RAN_allow_commission') === false || getEventData('RAN_allow_commission') === "false") {
+logToConsole('Allow commission is set to false, the tag will not fire');      
         data.gtmOnFailure();
         return false;
     }
@@ -703,28 +710,28 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
     if (affiliateConfig.tagType === "mop") {
         trackingMethod = "eventnvppixel";
     }
-    let discountReporting = "item";
-    if (affiliateConfig.discountType === "order") {
-        discountReporting = "order";
+    let discountReporting = "order";
+    if (affiliateConfig.discountType === "item") {
+        discountReporting = "item";
     }
     let includeCustomerStatus = false;
-    if (affiliateConfig.includeStatus === true) {
+    if (affiliateConfig.includeStatus === true || affiliateConfig.includeStatus === "true") {
         includeCustomerStatus = true;
-    }
+    }  
     let removeOrderLevelTax = false;
-    if (affiliateConfig.removeOrderTax === true) {
+    if (affiliateConfig.removeOrderTax === true || affiliateConfig.removeOrderTax === "true") {
         removeOrderLevelTax = true;
-    }
-    let removeTaxFromProducts = true;
-    if (affiliateConfig.removeTaxFromProducts === false) {
-        removeTaxFromProducts = false;
-    }
+    }   
+    let removeTaxFromProducts = false;
+    if (affiliateConfig.removeTaxFromProducts === true || affiliateConfig.removeTaxFromProducts === "true") {
+        removeTaxFromProducts = true;
+    }  
     let removeTaxFromDiscount = false;
-    if (affiliateConfig.removeTaxFromDiscount === true) {
+    if (affiliateConfig.removeTaxFromDiscount === true || affiliateConfig.removeTaxFromDiscount === "true") {
         removeTaxFromDiscount = true;
-    }
+    }   
     let useCentValues = true;
-    if (affiliateConfig.centValues === false) {
+    if (affiliateConfig.centValues === false || affiliateConfig.centValues === "false") {
         useCentValues = false;
     }
     const nonCentCurrencies = "JPY";
@@ -738,7 +745,7 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
 
     // pre-defined lineitems hard coded values for lead gen and registrations etc.
     let predefinedLineitems = JSON.parse(getEventData('RAN_predefined_products')) || '{}';
-
+logToConsole('RAN_predefined_products', predefinedLineitems);
     if (predefinedLineitems) {
         lineitems = predefinedLineitems;
     }
@@ -761,7 +768,6 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
         dl.taxRate = taxRate;
     }
 
-
     let multiplyBy100 = useCentValues && useCentValues !== "false";
     let isNonCentCurrency = false;
     // determine that currency of the order does not have a cent part (e.g JPY)
@@ -774,7 +780,7 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
             }
         }
     }
-
+logToConsole('Rakuten DataLayer', dl);
     // this function can be used to ensure any money value is being rounded consistently before output.
     // you should not round anything until it is passed into the final string
     const currencyValueToString = function(val) {
@@ -829,7 +835,7 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
         if(custom_cookie_name){
         rmStore = getCookieValues(custom_cookie_name)[0];
         } 
-
+logToConsole('Rakuten cookie', rmStore);
         if (!rmStore) {
             data.gtmOnFailure();
             return false;
@@ -863,7 +869,7 @@ requestUrl = requestUrl + "&" + enc(E).replace('RAN_', '') + "=" + enc(optionalD
         logToConsole(
             "Rakuten Advertising: Performance Tag - RAN Pixel",
             requestUrl
-        );
+        );      
 
         sendHttpRequest(requestUrl, {
                 method: "GET"
@@ -1066,11 +1072,9 @@ ___SERVER_PERMISSIONS___
 ___TESTS___
 
 scenarios: []
-setup: mock("sendHttpRequest", (url, cb) => { cb(200, {}, {}); });
+
 
 
 ___NOTES___
 
 Created on 8/24/2022, 10:50:27 AM
-
-
