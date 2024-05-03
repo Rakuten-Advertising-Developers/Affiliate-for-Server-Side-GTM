@@ -2,9 +2,11 @@ homepage: "https://rakutenadvertising.com/"
 documentation: "https://go.rakutenadvertising.com/hubfs/Rakuten-Affiliate-for-Server-Side-Google-Tag-Manager.pdf"
 versions:
   # Latest version
+  - sha: 0130d4c27de614b8a6893005b6741070bd6ed661
+    changeNotes: "Added additional debugging data and logic to pass timestamp and click ID without requiring a cookie."
+  # Older versions
   - sha: 5310f8e01bd42808b69e21ad0eec277ba4445e8a
     changeNotes: "Added debug logic, SKU prefix code and updated some variables to read boolean and string values."
-  # Older versions
   - sha: 86758515d293f607c44e0f70f145924e7b5f6e97
     changeNotes: "Updated logo, updated template name, added additional cookie reading logic."
   - sha: 70950c3aed69380824f9a094f69532372f46a23d
