@@ -95,12 +95,21 @@ const makeNumber = require("makeNumber");
 const makeTableMap = require("makeTableMap");
 const Math = require("Math");
 const parseUrl = require("parseUrl");
+const generateRandom = require('generateRandom');
 const sendHttpRequest = require("sendHttpRequest");
 const setCookie = require("setCookie");
 
 function enc(data) {
     return encodeUriComponent(data || "");
 }
+
+//creates a random order id
+const randomValue = generateRandom(11111, 99999);
+
+    let generateOrderId = function(merchantID) {        
+        let todayFormatted = getFormattedTime(getTimestampMillis()).split("_").join("");
+        return "NoOID_" + merchantID + "_" + Math.round(randomValue) + "_" + todayFormatted;
+    }; 
 
 //Calculate YYYYMMDD_HHmm from milliseconds timestamp
 function isLeapYear(n) {
@@ -198,6 +207,7 @@ function getFormattedTime(time_ms) {
 
 // Pageview tag
 if (data.type === "page_view") {
+logToConsole('Rakuten Advertising: page view tag');
     const url = getEventData("page_location");
 
     if (url) {
@@ -206,7 +216,7 @@ if (data.type === "page_view") {
         if (atrv) {
             const ald = getFormattedTime(getTimestampMillis());
             const rmStore = "ald:" + ald + "|atrv:" + atrv;
-logToConsole('rmStore', rmStore);
+logToConsole('Rakuten Advertising: pageview rmStore', rmStore);
             if (rmStore) {
                 setCookie(
                     "rmStore",
@@ -227,13 +237,30 @@ logToConsole('rmStore', rmStore);
         }
     }
     data.gtmOnSuccess();
-} else if (data.type === "conversion") {
-    // Conversion tag
+  
+    // Conversion tag  
+} else if (data.type === "conversion") {  
+
+logToConsole('Rakuten Advertising: conversion tag');
+
     // Affiliate config setup
     const affiliateConfig = JSON.parse(getEventData('RAN_affiliate_config')) || '{}';
-logToConsole('Affiliate Config', affiliateConfig); 
+logToConsole('Rakuten Advertising: Affiliate Config', affiliateConfig); 
     // define standard DL variables
-    const orderId = getEventData('RAN_transaction_id');
+  
+    let merchantID = affiliateConfig.ranMID;
+    // do not fire tag if we are missing the MID
+    if(!merchantID){
+logToConsole('Rakuten Advertising: MID is missing, the tag will not fire');
+        data.gtmOnFailure();
+        return false;
+    }
+ 
+    let orderId = getEventData('RAN_transaction_id')? getEventData('RAN_transaction_id') : generateOrderId(merchantID);
+
+    if(!getEventData('RAN_transaction_id') || getEventData('RAN_transaction_id') === undefined || getEventData('RAN_transaction_id') === ""){
+logToConsole('Rakuten Advertising: Order ID is missing');
+   }  
     const currency = getEventData('RAN_currency_code').toUpperCase();
     const customerStatus = getEventData('RAN_customer_status') || '';
     const customerId = getEventData('RAN_customer_id') || '';
@@ -241,7 +268,7 @@ logToConsole('Affiliate Config', affiliateConfig);
     const discountCode = getEventData('RAN_coupon') || '';
     let discountAmount = getEventData('RAN_discount_amount') || 0;
     let discountAmountLessTax = getEventData('RAN_discount_amount_less_tax') || 0;
-    let taxAmount = Math.abs(makeNumber(getEventData('RAN_tax_amount'))) || 0;
+    let taxAmount = Math.abs(makeNumber(getEventData('RAN_tax_amount'))) || 0;  
 
     // define standard order level optional data fields;
     const tableData = getEventData('x-ga-mp2-user_properties') || null;
@@ -250,10 +277,10 @@ logToConsole('Affiliate Config', affiliateConfig);
         optionalDataOrder = tableData;
     }
 
-    let merchantID = affiliateConfig.ranMID;  
-    let allowCommission = true;  
+    let allowCommission = true;
+    // do not fire tag if allowCommission is set to false  
     if (getEventData('RAN_allow_commission') === false || getEventData('RAN_allow_commission') === "false") {
-logToConsole('Allow commission is set to false, the tag will not fire');
+logToConsole('Rakuten Advertising: Allow commission is set to false, the tag will not fire');
         data.gtmOnFailure();
         return false;
     }
@@ -302,11 +329,11 @@ logToConsole('Allow commission is set to false, the tag will not fire');
     //custom_products is used to accomodate non standard ecommerce setups using a custom JS variable  
     if (getEventData('RAN_custom_products')) {
         lineitems = JSON.parse(getEventData('RAN_custom_products'));
-logToConsole('Rakuten custom products', lineitems);
+logToConsole('Rakuten Advertising: Custom Products', lineitems);
     } else {
 
         let items = getEventData('items');
-logToConsole('Client GTM dataLayer items', items);
+logToConsole('Rakuten Advertising: Client GTM dataLayer Items', items);
         for (var i = 0; i < items.length; i++) {
             lineitems.push({
                 quantity: items[i].quantity,
@@ -324,8 +351,16 @@ logToConsole('Client GTM dataLayer items', items);
                 },
             });
         }
-logToConsole('Rakuten lineitems', lineitems);      
+logToConsole('Rakuten Advertising: Formatted Lineitems', lineitems);      
     }
+
+
+    if(!orderId && !lineitems && !lineitems.length ){
+logToConsole('Rakuten Advertising: Order ID & lineitems missing, the tag will not fire');
+        data.gtmOnFailure();
+        return false;
+    }   
+
   
     // define rm_trans object with essential parameters
     const dl = {
@@ -385,7 +420,7 @@ logToConsole('Rakuten lineitems', lineitems);
             }
         }
     }
-logToConsole('Rakuten DataLayer', dl);
+logToConsole('Rakuten Advertising: DataLayer Object', dl);
     // this function can be used to ensure any money value is being rounded consistently before output.
     // you should not round anything until it is passed into the final string
     const currencyValueToString = function(val) {
@@ -538,9 +573,15 @@ logToConsole('Rakuten DataLayer', dl);
             itemvalue_list += "|-" + taxAmount;
             name_list += "|" + skuPrefix + "ORDERTAX";
         }
-
-        let land = "";
-        let tr = "";
+        // added logic to accept land and tr values from the GA4 tag 
+        let land = "" || getEventData('RAN_land') || '';
+        let tr = "" || getEventData('RAN_tr') || '';
+      
+        if(land.length  > 0 && tr.length > 0){
+logToConsole('Rakuten Advertising: Land & tr Values from GA4 tag', land + "|" + tr);          
+        }
+      
+        if(land.length === 0 && tr.length === 0){      
         let ignoreGatewayCookie = false;        
         if(getEventData('RAN_ignoreGatewayCookie') === true || getEventData('RAN_ignoreGatewayCookie') === "true"){
            ignoreGatewayCookie = true;
@@ -556,12 +597,15 @@ logToConsole('Rakuten DataLayer', dl);
         let custom_cookie_name = getEventData('RAN_custom_cookie_name') || '';
         if(custom_cookie_name){
         rmStore = getCookieValues(custom_cookie_name)[0];
-        } 
-logToConsole('Rakuten cookie', rmStore);      
+        }
+ 
+logToConsole('Rakuten Advertising: Cookie Values', rmStore);
+      
         if (!rmStore) {
             data.gtmOnFailure();
             return false;
         }
+      
         const rm_spl = rmStore.split("|");
         for (let p = 0; p < rm_spl.length; p++) {
             if (rm_spl[p].indexOf("ald") > -1) {
@@ -571,9 +615,11 @@ logToConsole('Rakuten cookie', rmStore);
                 tr = rm_spl[p].split(":")[1];
             }
         }
-
+      } 
+     
         let requestUrl = "https://" + domain + "/" + trackingMethod + "?mid=" + merchantID;
-        
+
+
         requestUrl += "&ord=" + orderId;
         requestUrl += "&land=" + land;
         requestUrl += "&tr=" + tr;
@@ -583,7 +629,8 @@ logToConsole('Rakuten cookie', rmStore);
         requestUrl += "&amtlist=" + itemvalue_list;
         requestUrl += "&img=1";
         requestUrl += "&spi=3.4.1";
-        requestUrl += "&source=sgtm";        
+        requestUrl += "&source=sgtm";  
+
       
         if (discountAmountLessTax && discountReporting.toLowerCase() === "item") {
             requestUrl += "&discount=" + discountAmountLessTax;
@@ -665,7 +712,7 @@ logToConsole('Rakuten cookie', rmStore);
                 method: 'GET'
             })
         .then((result) => {
-                logToConsole(JSON.stringify({
+                logToConsole("Rakuten Advertising: Response Info", JSON.stringify({
                     'Name': 'Rakuten Performance Tag',
                     'Type': 'Response',
                     'EventName': 'Conversion',
@@ -681,24 +728,30 @@ logToConsole('Rakuten cookie', rmStore);
             }
         )
         .catch(() => {
-          logToConsole("Failed to make RAN Pixel Request");
+          logToConsole("Rakuten Advertising: Failed to make RAN Pixel Request");
           data.gtmOnFailure();
         });
     }
-} else if (data.type === "lead") {
+
     // Lead tag
+} else if (data.type === "lead") {
+logToConsole('Rakuten Advertising: Lead tag');
+
     // Affiliate config setup
     const affiliateConfig = JSON.parse(getEventData('RAN_lead_affiliate_config')) || '{}';
-logToConsole('RAN_lead_affiliate_config', affiliateConfig);  
+logToConsole('Rakuten Advertising: RAN_lead_affiliate_config', affiliateConfig); 
+  
+    let merchantID = affiliateConfig.ranMID;  
+  
     // define standard DL variables
-    const orderId = getEventData('RAN_transaction_id');
+    let orderId = getEventData('RAN_transaction_id')? getEventData('RAN_transaction_id') : generateOrderId(merchantID);
     const currency = getEventData('RAN_currency_code').toUpperCase();
     const conversionType = getEventData('RAN_conversion_type') || "Lead";
 
-    let merchantID = affiliateConfig.ranMID;
+
     let allowCommission = true;
     if (getEventData('RAN_allow_commission') === false || getEventData('RAN_allow_commission') === "false") {
-logToConsole('Allow commission is set to false, the tag will not fire');      
+logToConsole('Rakuten Advertising: Allow commission is set to false, the tag will not fire');      
         data.gtmOnFailure();
         return false;
     }
@@ -745,7 +798,7 @@ logToConsole('Allow commission is set to false, the tag will not fire');
 
     // pre-defined lineitems hard coded values for lead gen and registrations etc.
     let predefinedLineitems = JSON.parse(getEventData('RAN_predefined_products')) || '{}';
-logToConsole('RAN_predefined_products', predefinedLineitems);
+logToConsole('Rakuten Advertising: RAN_predefined_products', predefinedLineitems);
     if (predefinedLineitems) {
         lineitems = predefinedLineitems;
     }
@@ -780,7 +833,7 @@ logToConsole('RAN_predefined_products', predefinedLineitems);
             }
         }
     }
-logToConsole('Rakuten DataLayer', dl);
+logToConsole('Rakuten Advertising: DataLayer Object', dl);
     // this function can be used to ensure any money value is being rounded consistently before output.
     // you should not round anything until it is passed into the final string
     const currencyValueToString = function(val) {
@@ -817,8 +870,34 @@ logToConsole('Rakuten DataLayer', dl);
         let itemvalue_list = currencyValueToString(Math.round(makeNumber(lineitems[0].unitPrice / taxPercent) * 100) / 100);
         let name_list = enc(lineitems[0].productName);
 
-        let land = "";
-        let tr = "";
+
+      
+        const optionalDataLineItems = {};
+
+        for (let l = 0; l < lineitems.length; l++) {
+            const item = lineitems[l];
+
+            const od = item.optionalData || {};
+            for (const E in od) {
+                if (od.hasOwnProperty(E)) {
+                    optionalDataLineItems[E] = optionalDataLineItems[E] || "";
+                    optionalDataLineItems[E] += enc(od[E]) + "|";
+                }
+            }
+
+            
+        }
+      
+      
+        // added logic to accept land and tr values from the GA4 tag 
+        let land = "" || getEventData('RAN_land') || '';
+        let tr = "" || getEventData('RAN_tr') || '';
+      
+        if(land.length  > 0 && tr.length > 0){
+logToConsole('Rakuten Advertising: Land & tr Values from GA4 tag', land + "|" + tr);          
+        }
+      
+        if(land.length === 0 && tr.length === 0){      
         let ignoreGatewayCookie = false;        
         if(getEventData('RAN_ignoreGatewayCookie') === true || getEventData('RAN_ignoreGatewayCookie') === "true"){
            ignoreGatewayCookie = true;
@@ -834,12 +913,15 @@ logToConsole('Rakuten DataLayer', dl);
         let custom_cookie_name = getEventData('RAN_custom_cookie_name') || '';
         if(custom_cookie_name){
         rmStore = getCookieValues(custom_cookie_name)[0];
-        } 
-logToConsole('Rakuten cookie', rmStore);
+        }
+ 
+logToConsole('Rakuten Advertising: Cookie Values', rmStore);
+      
         if (!rmStore) {
             data.gtmOnFailure();
             return false;
         }
+      
         const rm_spl = rmStore.split("|");
         for (let p = 0; p < rm_spl.length; p++) {
             if (rm_spl[p].indexOf("ald") > -1) {
@@ -849,8 +931,10 @@ logToConsole('Rakuten cookie', rmStore);
                 tr = rm_spl[p].split(":")[1];
             }
         }
-
+      } 
+     
         let requestUrl = "https://" + domain + "/" + trackingMethod + "?mid=" + merchantID;
+
 
         requestUrl += "&ord=" + orderId;
         requestUrl += "&land=" + land;
@@ -862,6 +946,20 @@ logToConsole('Rakuten cookie', rmStore);
         requestUrl += "&img=1";
         requestUrl += "&spi=3.4.1";
         requestUrl += "&source=sgtm";
+
+           
+        for (const E in optionalDataLineItems) {
+            if (optionalDataLineItems.hasOwnProperty(E)) {
+                requestUrl =
+                    requestUrl +
+                    "&" +
+                    enc(E) +
+                    "list=" +
+                    optionalDataLineItems[E].slice(0, -1);
+
+            }
+        }
+      
 
         // namelist added at the end as it has lowest importance
         requestUrl += "&namelist=" + name_list;
@@ -875,7 +973,7 @@ logToConsole('Rakuten cookie', rmStore);
                 method: "GET"
             })
             .then((result) => {
-                logToConsole(JSON.stringify({
+                logToConsole("Rakuten Advertising: Response Info", JSON.stringify({
                     'Name': 'Rakuten Performance Tag',
                     'Type': 'Response',
                     'EventName': 'Lead',
@@ -890,7 +988,7 @@ logToConsole('Rakuten cookie', rmStore);
                 }
             })
             .catch(() => {
-                logToConsole("Failed to make RAN Pixel Request");
+                logToConsole("Rakuten Advertising: Failed to make RAN Pixel Request");
                 data.gtmOnFailure();
             });
 
@@ -1072,7 +1170,6 @@ ___SERVER_PERMISSIONS___
 ___TESTS___
 
 scenarios: []
-
 
 
 ___NOTES___
