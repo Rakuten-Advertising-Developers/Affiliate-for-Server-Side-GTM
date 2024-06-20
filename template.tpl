@@ -79,6 +79,36 @@ ___TEMPLATE_PARAMETERS___
         "type": "EQUALS"
       }
     ]
+  },
+  {
+    "type": "GROUP",
+    "name": "optionalSettings",
+    "displayName": "Optional settings",
+    "groupStyle": "ZIPPY_CLOSED",
+    "subParams": [
+      {
+        "type": "CHECKBOX",
+        "name": "MIDcheckbox",
+        "checkboxText": "Capture MID from URL",
+        "simpleValueType": true,
+        "help": "Please only tick this box after discussing it with your Rakuten contact. This option is useful for some multi-region clients with multiple MIDs. Ticking the box ensures that the sale is attributed to the MID in the landing page URL. For example, if a user clicks on a UK affiliate link, but then checks out on the US site the sale will be attributed to the UK MID rather than the US one.",
+        "subParams": [],
+        "enablingConditions": [
+          {
+            "paramName": "type",
+            "paramValue": "page_view",
+            "type": "EQUALS"
+          }
+        ]
+      }
+    ],
+    "enablingConditions": [
+      {
+        "paramName": "type",
+        "paramValue": "page_view",
+        "type": "EQUALS"
+      }
+    ]
   }
 ]
 
@@ -99,9 +129,21 @@ const generateRandom = require('generateRandom');
 const sendHttpRequest = require("sendHttpRequest");
 const setCookie = require("setCookie");
 
+//encodes data
 function enc(data) {
     return encodeUriComponent(data || "");
 }
+
+//removes unwanted optional data parameters
+let removeNonPrefixedKeys = function(obj) {
+    let newObj = {};
+    for (let key in obj) {
+        if (key.substring(0, 4) === 'RAN_') {
+            newObj[key] = obj[key];
+        }
+    }
+    return newObj;
+};
 
 //creates a random order id
 const randomValue = generateRandom(11111, 99999);
@@ -207,7 +249,7 @@ function getFormattedTime(time_ms) {
 
 // Pageview tag
 if (data.type === "page_view") {
-logToConsole('Rakuten Advertising: page view tag');
+logToConsole('Rakuten Advertising: Page view tag');
     const url = getEventData("page_location");
 
     if (url) {
@@ -215,8 +257,15 @@ logToConsole('Rakuten Advertising: page view tag');
 
         if (atrv) {
             const ald = getFormattedTime(getTimestampMillis());
-            const rmStore = "ald:" + ald + "|atrv:" + atrv;
-logToConsole('Rakuten Advertising: pageview rmStore', rmStore);
+            let rmStore = "ald:" + ald + "|atrv:" + atrv;
+logToConsole('Rakuten Advertising: rmStore cookie -', rmStore);
+if(data.MIDcheckbox){
+const mid = parseUrl(url).searchParams.ranMID || "";
+rmStore = "mid:" + mid + "|ald:" + ald + "|atrv:" + atrv;
+logToConsole('Rakuten Advertising: Landing MID added to rmStore cookie -', rmStore);
+
+
+}     
             if (rmStore) {
                 setCookie(
                     "rmStore",
@@ -241,7 +290,7 @@ logToConsole('Rakuten Advertising: pageview rmStore', rmStore);
     // Conversion tag  
 } else if (data.type === "conversion") {  
 
-logToConsole('Rakuten Advertising: conversion tag');
+logToConsole('Rakuten Advertising: Conversion tag');
 
     // Affiliate config setup
     const affiliateConfig = JSON.parse(getEventData('RAN_affiliate_config')) || '{}';
@@ -249,6 +298,7 @@ logToConsole('Rakuten Advertising: Affiliate Config', affiliateConfig);
     // define standard DL variables
   
     let merchantID = affiliateConfig.ranMID;
+
     // do not fire tag if we are missing the MID
     if(!merchantID){
 logToConsole('Rakuten Advertising: MID is missing, the tag will not fire');
@@ -275,6 +325,9 @@ logToConsole('Rakuten Advertising: Order ID is missing');
     let optionalDataOrder = null;
     if (tableData) {
         optionalDataOrder = tableData;
+logToConsole('Rakuten Advertising: Incoming user properties data', optionalDataOrder);      
+        optionalDataOrder = removeNonPrefixedKeys(optionalDataOrder);
+logToConsole('Rakuten Advertising: Order-level optional data RAN_ params only', optionalDataOrder);
     }
 
     let allowCommission = true;
@@ -406,6 +459,7 @@ logToConsole('Rakuten Advertising: Order ID & lineitems missing, the tag will no
     }
     if (tableData !== null) {
         dl.optionalData = optionalDataOrder;
+logToConsole('Rakuten Advertising: Order-level optional data added to dl object', dl.optionalData);
     }
 
     let multiplyBy100 = useCentValues && useCentValues !== "false";
@@ -608,14 +662,23 @@ logToConsole('Rakuten Advertising: Cookie Values', rmStore);
       
         const rm_spl = rmStore.split("|");
         for (let p = 0; p < rm_spl.length; p++) {
-            if (rm_spl[p].indexOf("ald") > -1) {
+            if(rm_spl[p].indexOf("ald") > -1) {
                 land = rm_spl[p].split(":")[1];
             }
-            if (rm_spl[p].indexOf("atrv") > -1) {
+            if(rm_spl[p].indexOf("atrv") > -1) {
                 tr = rm_spl[p].split(":")[1];
             }
+            if(rm_spl[p].indexOf("mid") > -1) {
+                merchantID = rm_spl[p].split(":")[1];
+            }          
         }
-      } 
+      }
+
+            if(getEventData('RAN_mid') && getEventData('RAN_mid').length > 0){
+                merchantID = getEventData('RAN_mid');
+logToConsole('Rakuten Advertising: MID Value from GA4 tag', merchantID); 
+            }      
+ 
      
         let requestUrl = "https://" + domain + "/" + trackingMethod + "?mid=" + merchantID;
 
@@ -629,7 +692,7 @@ logToConsole('Rakuten Advertising: Cookie Values', rmStore);
         requestUrl += "&amtlist=" + itemvalue_list;
         requestUrl += "&img=1";
         requestUrl += "&spi=3.4.1";
-        requestUrl += "&source=sgtm";  
+        requestUrl += "&source=sgtm";
 
       
         if (discountAmountLessTax && discountReporting.toLowerCase() === "item") {
@@ -704,7 +767,7 @@ logToConsole('Rakuten Advertising: Cookie Values', rmStore);
         }
 
         logToConsole(
-            "Rakuten Advertising: Performance Tag - RAN Pixel",
+            "Rakuten Advertising: Outgoing request",
             requestUrl
         );
 
@@ -924,14 +987,23 @@ logToConsole('Rakuten Advertising: Cookie Values', rmStore);
       
         const rm_spl = rmStore.split("|");
         for (let p = 0; p < rm_spl.length; p++) {
-            if (rm_spl[p].indexOf("ald") > -1) {
+            if(rm_spl[p].indexOf("ald") > -1) {
                 land = rm_spl[p].split(":")[1];
             }
-            if (rm_spl[p].indexOf("atrv") > -1) {
+            if(rm_spl[p].indexOf("atrv") > -1) {
                 tr = rm_spl[p].split(":")[1];
             }
+            if(rm_spl[p].indexOf("mid") > -1) {
+                merchantID = rm_spl[p].split(":")[1];
+            }          
         }
-      } 
+      }
+
+            if(getEventData('RAN_mid') && getEventData('RAN_mid').length > 0){
+                merchantID = getEventData('RAN_mid');
+logToConsole('Rakuten Advertising: MID Value from GA4 tag', merchantID); 
+            }      
+ 
      
         let requestUrl = "https://" + domain + "/" + trackingMethod + "?mid=" + merchantID;
 
@@ -947,7 +1019,7 @@ logToConsole('Rakuten Advertising: Cookie Values', rmStore);
         requestUrl += "&spi=3.4.1";
         requestUrl += "&source=sgtm";
 
-           
+
         for (const E in optionalDataLineItems) {
             if (optionalDataLineItems.hasOwnProperty(E)) {
                 requestUrl =
@@ -965,7 +1037,7 @@ logToConsole('Rakuten Advertising: Cookie Values', rmStore);
         requestUrl += "&namelist=" + name_list;
 
         logToConsole(
-            "Rakuten Advertising: Performance Tag - RAN Pixel",
+            "Rakuten Advertising: Outgoing request",
             requestUrl
         );      
 
