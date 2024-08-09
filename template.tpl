@@ -1067,7 +1067,6 @@ logToConsole('Rakuten Advertising: MID Value from GA4 tag', merchantID);
      
         let requestUrl = "https://" + domain + "/" + trackingMethod + "?mid=" + merchantID;
 
-/*
         requestUrl += "&ord=" + orderId;
         requestUrl += "&land=" + land;
         requestUrl += "&tr=" + tr;
@@ -1078,19 +1077,6 @@ logToConsole('Rakuten Advertising: MID Value from GA4 tag', merchantID);
         requestUrl += "&img=1";
         requestUrl += "&spi=3.4.1";
         requestUrl += "&source=sgtm";
-*/
-      
-        requestUrl += "&ord=" + enc(orderId);
-        requestUrl += "&land=" + enc(land);
-        requestUrl += "&tr=" + enc(tr);
-        requestUrl += "&cur=" + enc(currency);
-        requestUrl += "&skulist=" + sku_list;
-        requestUrl += "&qlist=" + quantity_list;
-        requestUrl += "&amtlist=" + itemvalue_list;
-        requestUrl += "&img=1";
-        requestUrl += "&spi=3.4.1";
-        requestUrl += "&source=sgtm";
-
 
         for (const E in optionalDataLineItems) {
             if (optionalDataLineItems.hasOwnProperty(E)) {
