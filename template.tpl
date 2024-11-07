@@ -13,7 +13,7 @@ ___INFO___
   "id": "cvt_temp_public_id",
   "version": 1,
   "securityGroups": [],
-  "displayName": "Rakuten Advertising - Affiliate Server-Side (Official)",
+  "displayName": "Rakuten Advertising - Affiliate Server-Side (Official) optional data update",
   "categories": [
     "AFFILIATE_MARKETING"
   ],
