@@ -321,13 +321,15 @@ logToConsole('Rakuten Advertising: Order ID is missing');
     let taxAmount = Math.abs(makeNumber(getEventData('RAN_tax_amount'))) || 0;  
 
     // define standard order level optional data fields;
-    const tableData = getEventData('x-ga-mp2-user_properties') || null;
     let optionalDataOrder = null;
-    if (tableData) {
-        optionalDataOrder = tableData;
-logToConsole('Rakuten Advertising: Incoming user properties data', optionalDataOrder);      
-        optionalDataOrder = removeNonPrefixedKeys(optionalDataOrder);
-logToConsole('Rakuten Advertising: Order-level optional data RAN_ params only', optionalDataOrder);
+    if(getEventData('RAN_optional_data_order')){
+    optionalDataOrder = JSON.parse(getEventData('RAN_optional_data_order'));      
+    }
+    else if(getEventData('x-ga-mp2-user_properties') && !optionalDataOrder){
+    optionalDataOrder = removeNonPrefixedKeys(getEventData('x-ga-mp2-user_properties'));
+    }
+    if (optionalDataOrder) {
+logToConsole('Rakuten Advertising: Order-level optional data.', optionalDataOrder);
     }
 
     let allowCommission = true;
@@ -457,7 +459,7 @@ logToConsole('Rakuten Advertising: Order ID & lineitems missing, the tag will no
     if (taxRate) {
         dl.taxRate = taxRate;
     }
-    if (tableData !== null) {
+    if (optionalDataOrder !== null) {
         dl.optionalData = optionalDataOrder;
 logToConsole('Rakuten Advertising: Order-level optional data added to dl object', dl.optionalData);
     }
