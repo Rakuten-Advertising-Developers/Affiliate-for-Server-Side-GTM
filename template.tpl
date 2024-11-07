@@ -145,6 +145,18 @@ let removeNonPrefixedKeys = function(obj) {
     return newObj;
 };
 
+//checks whether JSON objects are empty
+function isObjectEmpty(obj) {
+    let isEmpty = true;
+    for (let key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            isEmpty = false;
+            break;
+        }
+    }
+    return isEmpty;
+}
+
 //creates a random order id
 const randomValue = generateRandom(11111, 99999);
 
@@ -325,8 +337,11 @@ logToConsole('Rakuten Advertising: Order ID is missing');
     if(getEventData('RAN_optional_data_order')){
     optionalDataOrder = JSON.parse(getEventData('RAN_optional_data_order'));      
     }
-    else if(getEventData('x-ga-mp2-user_properties') && !optionalDataOrder){
+    if(getEventData('x-ga-mp2-user_properties') && !optionalDataOrder){
     optionalDataOrder = removeNonPrefixedKeys(getEventData('x-ga-mp2-user_properties'));
+    if (isObjectEmpty(optionalDataOrder)) {
+    optionalDataOrder = null;
+    }
     }
     if (optionalDataOrder) {
 logToConsole('Rakuten Advertising: Order-level optional data.', optionalDataOrder);
