@@ -260,8 +260,8 @@ logToConsole('Rakuten Advertising: Page view tag');
             let rmStore = "ald:" + ald + "|atrv:" + atrv;
 logToConsole('Rakuten Advertising: rmStore cookie -', rmStore);
 if(data.MIDcheckbox){
-const mid = parseUrl(url).searchParams.ranMID || "";
-rmStore = "mid:" + mid + "|ald:" + ald + "|atrv:" + atrv;
+const amid = parseUrl(url).searchParams.ranMID || "";
+rmStore = "amid:" + amid + "|ald:" + ald + "|atrv:" + atrv;
 logToConsole('Rakuten Advertising: Landing MID added to rmStore cookie -', rmStore);
 
 
@@ -628,8 +628,8 @@ logToConsole('Rakuten Advertising: DataLayer Object', dl);
             name_list += "|" + skuPrefix + "ORDERTAX";
         }
         // added logic to accept land and tr values from the GA4 tag 
-        let land = "" || getEventData('RAN_land') || '';
-        let tr = "" || getEventData('RAN_tr') || '';
+        let land = getEventData('RAN_land') || '';
+        let tr = getEventData('RAN_tr') || '';
       
         if(land.length  > 0 && tr.length > 0){
 logToConsole('Rakuten Advertising: Land & tr Values from GA4 tag', land + "|" + tr);          
@@ -668,7 +668,7 @@ logToConsole('Rakuten Advertising: Cookie Values', rmStore);
             if(rm_spl[p].indexOf("atrv") > -1) {
                 tr = rm_spl[p].split(":")[1];
             }
-            if(rm_spl[p].indexOf("mid") > -1) {
+            if(rm_spl[p].indexOf("amid") > -1) {
                 merchantID = rm_spl[p].split(":")[1];
             }          
         }
@@ -953,8 +953,8 @@ logToConsole('Rakuten Advertising: DataLayer Object', dl);
       
       
         // added logic to accept land and tr values from the GA4 tag 
-        let land = "" || getEventData('RAN_land') || '';
-        let tr = "" || getEventData('RAN_tr') || '';
+        let land = getEventData('RAN_land') || '';
+        let tr = getEventData('RAN_tr') || '';
       
         if(land.length  > 0 && tr.length > 0){
 logToConsole('Rakuten Advertising: Land & tr Values from GA4 tag', land + "|" + tr);          
@@ -993,7 +993,7 @@ logToConsole('Rakuten Advertising: Cookie Values', rmStore);
             if(rm_spl[p].indexOf("atrv") > -1) {
                 tr = rm_spl[p].split(":")[1];
             }
-            if(rm_spl[p].indexOf("mid") > -1) {
+            if(rm_spl[p].indexOf("amid") > -1) {
                 merchantID = rm_spl[p].split(":")[1];
             }          
         }
