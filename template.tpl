@@ -988,12 +988,14 @@ if (data.type === "page_view") {
                 rmStore = getCookieValues(custom_cookie_name)[0];
             }
 
-            logToConsole('Rakuten Advertising: Cookie Values', rmStore);
-
-            if (!rmStore) {
-                data.gtmOnFailure();
-                return false;
+            if (rmStore) {
+                logToConsole('Rakuten Advertising: Rakuten cookie is present.', rmStore);
             }
+            if (!rmStore) {
+                logToConsole('Rakuten Advertising: Rakuten cookie is not present');
+            }
+
+
 
             const rm_spl = rmStore.split("|");
             for (let p = 0; p < rm_spl.length; p++) {
@@ -1019,8 +1021,10 @@ if (data.type === "page_view") {
 
 
         requestUrl += "&ord=" + orderId;
-        requestUrl += "&land=" + land;
-        requestUrl += "&tr=" + tr;
+        if (land && tr) {
+            requestUrl += "&land=" + land;
+            requestUrl += "&tr=" + tr;
+        }
         requestUrl += "&cur=" + currency;
         requestUrl += "&skulist=" + sku_list;
         requestUrl += "&qlist=" + quantity_list;
@@ -1257,3 +1261,5 @@ scenarios: []
 ___NOTES___
 
 Created on 8/24/2022, 10:50:27 AM
+
+
