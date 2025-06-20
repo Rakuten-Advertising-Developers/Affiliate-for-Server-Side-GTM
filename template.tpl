@@ -693,8 +693,10 @@ if (data.type === "page_view") {
 
 
         requestUrl += "&ord=" + orderId;
-        if (land && tr) {
+        if (land) {
             requestUrl += "&land=" + land;
+        }
+        if (tr) {
             requestUrl += "&tr=" + tr;
         }
         requestUrl += "&cur=" + currency;
@@ -1021,8 +1023,10 @@ if (data.type === "page_view") {
 
 
         requestUrl += "&ord=" + orderId;
-        if (land && tr) {
+        if (land) {
             requestUrl += "&land=" + land;
+        }
+        if (tr) {
             requestUrl += "&tr=" + tr;
         }
         requestUrl += "&cur=" + currency;
