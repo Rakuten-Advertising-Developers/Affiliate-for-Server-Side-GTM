@@ -2,9 +2,11 @@ homepage: "https://rakutenadvertising.com/"
 documentation: "https://go.rakutenadvertising.com/hubfs/Rakuten-Affiliate-for-Server-Side-Google-Tag-Manager.pdf"
 versions:
   # Latest version
+  - sha: 8fc399c5ae8db658f2abf8c99267031f6f53f8f0
+    changeNotes: "Added link-less tracking functionality."
+  # Older versions
   - sha: 9cee61743dfea89988a029239c3cc0d85827a58c
     changeNotes: "Cleaned up a couple of typos, no functional change."
-  # Older versions
   - sha: 1c829046ea56a9fecb0037eedef439f5f8302fd5
     changeNotes: "Added last click functionality and additional debugging logic."
   - sha: 0130d4c27de614b8a6893005b6741070bd6ed661
