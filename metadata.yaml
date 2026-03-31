@@ -2,9 +2,11 @@ homepage: "https://rakutenadvertising.com/"
 documentation: "https://go.rakutenadvertising.com/hubfs/Rakuten-Affiliate-for-Server-Side-Google-Tag-Manager.pdf"
 versions:
   # Latest version
+  - sha: 95fe40289a68ba625d9516a63a2ce32717da065e
+    changeNotes: "Major update: Supports full server-side tag UI configuration; compatible with a wide range of server-side event data; can read most essential values directly from GA4 event data; automates item category concatenation; improved debug logic; configurable page view cookie. Thorough testing is advised after updating"
+  # Older versions
   - sha: 8fc399c5ae8db658f2abf8c99267031f6f53f8f0
     changeNotes: "Added link-less tracking functionality."
-  # Older versions
   - sha: 9cee61743dfea89988a029239c3cc0d85827a58c
     changeNotes: "Cleaned up a couple of typos, no functional change."
   - sha: 1c829046ea56a9fecb0037eedef439f5f8302fd5
