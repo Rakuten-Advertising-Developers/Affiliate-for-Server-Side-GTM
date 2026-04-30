@@ -247,7 +247,7 @@ ___TEMPLATE_PARAMETERS___
             "name": "cookieSubDomain",
             "displayName": "Cookie sub-domain",
             "simpleValueType": true,
-            "help": "Optional - configure the domain that the Rakuten cookie should be set under. Defaults to the full website domain if no value is set here.\nIf you have to set it manually use the dotted root domain, e.g. \u003cb\u003e.us.examplewebsite.com\u003c/b\u003e",
+            "help": "Optional - configure the domain that the Rakuten cookie should be set under. Defaults to automatic domain detection from request headers. If you experience issues with cookie domain not matching your website, set this manually using the dotted root domain, e.g. \u003cb\u003e.us.examplewebsite.com\u003c/b\u003e",
             "alwaysInSummary": false,
             "valueHint": ".us.examplewebsite.com"
           }
